@@ -7,20 +7,34 @@ COPY prisma ./prisma/
 
 RUN npm ci
 
+# Generate Prisma client before build
+RUN npx prisma generate
+
 COPY . .
 
 RUN npm run build
-RUN npx prisma generate
 
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
+# Install all dependencies (need ts-node for seed script)
+COPY package*.json ./
+COPY prisma ./prisma/
+RUN npm ci
+RUN npx prisma generate
+
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package*.json ./
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+
+# Change ownership so nestjs can run prisma
+RUN chown -R nestjs:nodejs /app
+
+USER nestjs
 
 EXPOSE 3001
 
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/main"]

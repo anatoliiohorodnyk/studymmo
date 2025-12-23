@@ -7,6 +7,12 @@ RUN npm ci
 
 COPY . .
 
+# Build arguments for environment variables (needed at build time for Next.js)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
