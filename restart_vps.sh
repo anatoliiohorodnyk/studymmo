@@ -102,6 +102,17 @@ until docker exec studymmo-postgres pg_isready -U ${POSTGRES_USER:-studymmo} 2>/
 done
 echo -e "${GREEN}Database is ready!${NC}"
 
+# Wait for backend to be ready
+echo -e "${YELLOW}Waiting for backend to start...${NC}"
+sleep 5
+
+# Check if backend is running
+if ! docker ps --format '{{.Names}}' | grep -q studymmo-backend; then
+  echo -e "${RED}Backend container failed to start! Showing logs:${NC}"
+  docker compose -f docker-compose.prod.yml logs backend
+  exit 1
+fi
+
 # Run migrations
 echo -e "${YELLOW}Running database migrations...${NC}"
 docker exec studymmo-backend npx prisma db push --accept-data-loss 2>/dev/null || true
