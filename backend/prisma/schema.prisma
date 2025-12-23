@@ -1,0 +1,512 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum GradeDisplaySystem {
+  letter
+  five_point
+  twelve_point
+}
+
+enum LocationType {
+  prep_school
+  school
+  college
+  university
+}
+
+enum SubjectCategory {
+  exact
+  natural
+  humanitarian
+  physical
+  creative
+}
+
+enum EquipmentSlot {
+  pen
+  notebook
+  backpack
+  calculator
+  glasses
+}
+
+enum ItemRarity {
+  common
+  uncommon
+  rare
+  epic
+  legendary
+  mythic
+}
+
+enum MaterialRarity {
+  common
+  uncommon
+  rare
+  epic
+}
+
+enum QuestType {
+  tutoring
+  teaching
+}
+
+enum OlympiadDifficulty {
+  school
+  district
+  city
+  national
+}
+
+enum ProfessionType {
+  tutoring
+  teaching
+  administration
+}
+
+// Users & Authentication
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String             @map("password_hash")
+  username           String             @unique
+  gradeDisplaySystem GradeDisplaySystem @default(letter) @map("grade_display_system")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  lastLogin          DateTime?          @map("last_login")
+
+  character Character?
+
+  @@map("users")
+}
+
+// Characters (1:1 with users)
+model Character {
+  id                       String    @id @default(uuid())
+  userId                   String    @unique @map("user_id")
+  cityId                   String    @map("city_id")
+  level                    Int       @default(1)
+  totalXp                  BigInt    @default(0) @map("total_xp")
+  cash                     BigInt    @default(0)
+  questEnergy              Int       @default(100) @map("quest_energy")
+  questEnergyMax           Int       @default(100) @map("quest_energy_max")
+  questEnergyLastRegen     DateTime  @default(now()) @map("quest_energy_last_regen")
+  olympiadEnergy           Int       @default(50) @map("olympiad_energy")
+  olympiadEnergyMax        Int       @default(50) @map("olympiad_energy_max")
+  olympiadEnergyLastRegen  DateTime  @default(now()) @map("olympiad_energy_last_regen")
+  currentLocationId        String    @map("current_location_id")
+  currentClassId           String?   @map("current_class_id")
+  currentSpecializationId  String?   @map("current_specialization_id")
+  totalStudyClicks         BigInt    @default(0) @map("total_study_clicks")
+  studyClicksInCurrentClass Int      @default(0) @map("study_clicks_in_current_class")
+  createdAt                DateTime  @default(now()) @map("created_at")
+
+  user                   User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city                   City                      @relation(fields: [cityId], references: [id])
+  currentLocation        Location                  @relation("CurrentLocation", fields: [currentLocationId], references: [id])
+  currentClass           Class?                    @relation("CurrentClass", fields: [currentClassId], references: [id])
+  currentSpecialization  Specialization?           @relation("CurrentSpecialization", fields: [currentSpecializationId], references: [id])
+
+  subjects               CharacterSubject[]
+  grades                 CharacterGrade[]
+  locationProgress       CharacterLocationProgress[]
+  equipment              CharacterEquipment[]
+  inventory              CharacterInventory[]
+  materials              CharacterMaterial[]
+  questCooldowns         CharacterQuestCooldown[]
+  weeklyParticipations   OlympiadWeeklyParticipant[]
+  professions            CharacterProfession[]
+  dailyReward            CharacterDailyReward?
+  marketListings         MarketListing[]
+  marketPurchases        MarketTransaction[]
+  chatMessages           ChatMessage[]
+
+  @@map("characters")
+}
+
+// World
+model City {
+  id        String   @id @default(uuid())
+  name      String
+  country   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  characters Character[]
+  locations  Location[]
+
+  @@map("cities")
+}
+
+model Location {
+  id                String       @id @default(uuid())
+  cityId            String       @map("city_id")
+  type              LocationType
+  name              String
+  unlockRequirement Json?        @map("unlock_requirement")
+  allowedSubjects   String[]     @default([]) @map("allowed_subjects")
+  orderIndex        Int          @map("order_index")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  city            City                        @relation(fields: [cityId], references: [id])
+  classes         Class[]
+  specializations Specialization[]
+  characters      Character[]                 @relation("CurrentLocation")
+  progress        CharacterLocationProgress[]
+
+  @@map("locations")
+}
+
+model Class {
+  id                        String   @id @default(uuid())
+  locationId                String   @map("location_id")
+  gradeNumber               Int      @map("grade_number")
+  requiredGradesPerSubject  Int      @default(15) @map("required_grades_per_subject")
+  allowedSubjects           String[] @default([]) @map("allowed_subjects")
+  createdAt                 DateTime @default(now()) @map("created_at")
+
+  location   Location         @relation(fields: [locationId], references: [id])
+  characters Character[]      @relation("CurrentClass")
+  grades     CharacterGrade[]
+
+  @@map("classes")
+}
+
+model Specialization {
+  id          String   @id @default(uuid())
+  locationId  String   @map("location_id")
+  name        String
+  requirements Json
+  unlockCost  Int      @map("unlock_cost")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  location   Location    @relation(fields: [locationId], references: [id])
+  characters Character[] @relation("CurrentSpecialization")
+
+  @@map("specializations")
+}
+
+// Subjects & Progress
+model Subject {
+  id        String          @id @default(uuid())
+  name      String          @unique
+  category  SubjectCategory
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  characterSubjects CharacterSubject[]
+  grades            CharacterGrade[]
+  olympiadTypes     OlympiadType[]
+  weeklyEvents      OlympiadWeeklyEvent[]
+
+  @@map("subjects")
+}
+
+model CharacterSubject {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  subjectId   String   @map("subject_id")
+  level       Int      @default(1)
+  currentXp   Int      @default(0) @map("current_xp")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+
+  @@unique([characterId, subjectId])
+  @@map("character_subjects")
+}
+
+model CharacterGrade {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  classId     String   @map("class_id")
+  subjectId   String   @map("subject_id")
+  score       Int
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  class     Class     @relation(fields: [classId], references: [id])
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+
+  @@map("character_grades")
+}
+
+model CharacterLocationProgress {
+  id                String   @id @default(uuid())
+  characterId       String   @map("character_id")
+  locationId        String   @map("location_id")
+  completionPercent Decimal  @default(0) @map("completion_percent") @db.Decimal(5, 2)
+  isCompleted       Boolean  @default(false) @map("is_completed")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  location  Location  @relation(fields: [locationId], references: [id])
+
+  @@unique([characterId, locationId])
+  @@map("character_location_progress")
+}
+
+// Equipment & Inventory
+model Item {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  description  String
+  slot         EquipmentSlot
+  rarity       ItemRarity
+  stats        Json
+  npcSellPrice Int           @map("npc_sell_price")
+  npcBuyPrice  Int?          @map("npc_buy_price")
+  isTradeable  Boolean       @default(true) @map("is_tradeable")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  equipment      CharacterEquipment[]
+  inventory      CharacterInventory[]
+  recipes        Recipe[]             @relation("ResultItem")
+  marketListings MarketListing[]
+
+  @@map("items")
+}
+
+model CharacterEquipment {
+  id          String        @id @default(uuid())
+  characterId String        @map("character_id")
+  slot        EquipmentSlot
+  itemId      String        @map("item_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id])
+
+  @@unique([characterId, slot])
+  @@map("character_equipment")
+}
+
+model CharacterInventory {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  itemId      String   @map("item_id")
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id])
+
+  @@unique([characterId, itemId])
+  @@map("character_inventory")
+}
+
+// Crafting
+model Material {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  rarity      MaterialRarity
+  description String
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  characterMaterials CharacterMaterial[]
+  recipes            Recipe[]            @relation("ResultMaterial")
+
+  @@map("materials")
+}
+
+model CharacterMaterial {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  materialId  String   @map("material_id")
+  quantity    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  material  Material  @relation(fields: [materialId], references: [id])
+
+  @@unique([characterId, materialId])
+  @@map("character_materials")
+}
+
+model Recipe {
+  id                     String    @id @default(uuid())
+  name                   String    @unique
+  resultItemId           String?   @map("result_item_id")
+  resultMaterialId       String?   @map("result_material_id")
+  resultQuantity         Int       @default(1) @map("result_quantity")
+  ingredients            Json
+  requiredCharacterLevel Int       @default(1) @map("required_character_level")
+  createdAt              DateTime  @default(now()) @map("created_at")
+
+  resultItem     Item?     @relation("ResultItem", fields: [resultItemId], references: [id])
+  resultMaterial Material? @relation("ResultMaterial", fields: [resultMaterialId], references: [id])
+
+  @@map("recipes")
+}
+
+// Quests
+model Quest {
+  id                   String    @id @default(uuid())
+  name                 String    @unique
+  description          String
+  type                 QuestType
+  energyCost           Int       @map("energy_cost")
+  cooldownSeconds      Int       @map("cooldown_seconds")
+  rewards              Json
+  requiredCharacterLevel Int     @default(1) @map("required_character_level")
+  requiredSubjectLevel Int       @default(1) @map("required_subject_level")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  cooldowns CharacterQuestCooldown[]
+
+  @@map("quests")
+}
+
+model CharacterQuestCooldown {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  questId     String   @map("quest_id")
+  availableAt DateTime @map("available_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  quest     Quest     @relation(fields: [questId], references: [id])
+
+  @@unique([characterId, questId])
+  @@map("character_quest_cooldowns")
+}
+
+// Olympiads
+model OlympiadType {
+  id                     String             @id @default(uuid())
+  name                   String             @unique
+  difficulty             OlympiadDifficulty
+  subjectId              String?            @map("subject_id")
+  energyCost             Int                @map("energy_cost")
+  npcLevelRange          Json               @map("npc_level_range")
+  rewards                Json
+  requiredCharacterLevel Int                @default(1) @map("required_character_level")
+  createdAt              DateTime           @default(now()) @map("created_at")
+
+  subject Subject? @relation(fields: [subjectId], references: [id])
+
+  @@map("olympiad_types")
+}
+
+model OlympiadWeeklyEvent {
+  id                  String   @id @default(uuid())
+  subjectId           String?  @map("subject_id")
+  startsAt            DateTime @map("starts_at")
+  endsAt              DateTime @map("ends_at")
+  rewardsByPercentile Json     @map("rewards_by_percentile")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  subject      Subject?                    @relation(fields: [subjectId], references: [id])
+  participants OlympiadWeeklyParticipant[]
+
+  @@map("olympiad_weekly_events")
+}
+
+model OlympiadWeeklyParticipant {
+  id             String   @id @default(uuid())
+  eventId        String   @map("event_id")
+  characterId    String   @map("character_id")
+  score          Int
+  rank           Int?
+  rewardsClaimed Boolean  @default(false) @map("rewards_claimed")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  event     OlympiadWeeklyEvent @relation(fields: [eventId], references: [id])
+  character Character           @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, characterId])
+  @@map("olympiad_weekly_participants")
+}
+
+// Market
+model MarketListing {
+  id           String   @id @default(uuid())
+  sellerId     String   @map("seller_id")
+  itemId       String   @map("item_id")
+  quantity     Int
+  pricePerUnit Int      @map("price_per_unit")
+  createdAt    DateTime @default(now()) @map("created_at")
+  expiresAt    DateTime @map("expires_at")
+  isActive     Boolean  @default(true) @map("is_active")
+
+  seller       Character           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  item         Item                @relation(fields: [itemId], references: [id])
+  transactions MarketTransaction[]
+
+  @@map("market_listings")
+}
+
+model MarketTransaction {
+  id         String   @id @default(uuid())
+  listingId  String   @map("listing_id")
+  buyerId    String   @map("buyer_id")
+  quantity   Int
+  totalPrice Int      @map("total_price")
+  fee        Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  listing MarketListing @relation(fields: [listingId], references: [id])
+  buyer   Character     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@map("market_transactions")
+}
+
+// Professions (post-MVP)
+model Profession {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  type        ProfessionType
+  requirements Json
+  benefits    Json
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  characters CharacterProfession[]
+
+  @@map("professions")
+}
+
+model CharacterProfession {
+  id           String   @id @default(uuid())
+  characterId  String   @map("character_id")
+  professionId String   @map("profession_id")
+  level        Int      @default(1)
+  currentXp    Int      @default(0) @map("current_xp")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  character  Character  @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  profession Profession @relation(fields: [professionId], references: [id])
+
+  @@unique([characterId, professionId])
+  @@map("character_professions")
+}
+
+// Daily Rewards
+model CharacterDailyReward {
+  id          String   @id @default(uuid())
+  characterId String   @unique @map("character_id")
+  currentDay  Int      @default(1) @map("current_day")
+  lastClaim   DateTime? @map("last_claim")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@map("character_daily_rewards")
+}
+
+// Global Chat
+model ChatMessage {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  username    String
+  message     String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
