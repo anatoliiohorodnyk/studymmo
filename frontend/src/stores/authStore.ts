@@ -14,7 +14,7 @@ interface AuthState {
     email: string,
     username: string,
     password: string,
-    cityId: string,
+    cityId?: string,
   ) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;

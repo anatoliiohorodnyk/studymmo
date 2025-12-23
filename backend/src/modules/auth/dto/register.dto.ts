@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, Matches, IsOptional } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -18,5 +18,6 @@ export class RegisterDto {
   password: string;
 
   @IsString()
-  cityId: string;
+  @IsOptional()
+  cityId?: string;
 }

@@ -103,7 +103,7 @@ class ApiClient {
     email: string;
     username: string;
     password: string;
-    cityId: string;
+    cityId?: string;
   }) {
     const tokens = await this.request<{ accessToken: string; refreshToken: string }>(
       '/auth/register',

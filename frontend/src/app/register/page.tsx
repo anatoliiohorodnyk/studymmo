@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
-import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { City } from '@/types/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,13 +15,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [cityId, setCityId] = useState('');
-  const [cities, setCities] = useState<City[]>([]);
   const [formError, setFormError] = useState('');
-
-  useEffect(() => {
-    api.getCities().then(setCities).catch(console.error);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,13 +32,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!cityId) {
-      setFormError('Please select a city');
-      return;
-    }
-
     try {
-      await register(email, username, password, cityId);
+      await register(email, username, password);
       router.push('/game');
     } catch {
       // Error is handled in store
@@ -109,29 +96,6 @@ export default function RegisterPage() {
               autoComplete="new-password"
               placeholder="Repeat password"
             />
-
-            <div>
-              <label
-                htmlFor="city"
-                className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-              >
-                Select City
-              </label>
-              <select
-                id="city"
-                value={cityId}
-                onChange={(e) => setCityId(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-                required
-              >
-                <option value="" className="bg-[var(--bg-card)]">Choose a city...</option>
-                {cities.map((city) => (
-                  <option key={city.id} value={city.id} className="bg-[var(--bg-card)]">
-                    {city.name}, {city.country}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {(error || formError) && (
               <p className="text-sm text-[var(--danger)] text-center bg-[var(--danger-bg)] p-2 rounded-lg">

@@ -34,17 +34,26 @@ export class AuthService {
       throw new ConflictException('Username already taken');
     }
 
-    const city = await this.prisma.city.findUnique({
-      where: { id: dto.cityId },
-    });
-
-    if (!city) {
-      throw new BadRequestException('Invalid city');
+    // Get city - use provided or first available
+    let cityId = dto.cityId;
+    if (!cityId) {
+      const firstCity = await this.prisma.city.findFirst();
+      if (!firstCity) {
+        throw new BadRequestException('No cities available');
+      }
+      cityId = firstCity.id;
+    } else {
+      const city = await this.prisma.city.findUnique({
+        where: { id: cityId },
+      });
+      if (!city) {
+        throw new BadRequestException('Invalid city');
+      }
     }
 
     const prepSchool = await this.prisma.location.findFirst({
       where: {
-        cityId: dto.cityId,
+        cityId: cityId,
         type: 'prep_school',
       },
       include: {
@@ -70,7 +79,7 @@ export class AuthService {
         passwordHash,
         character: {
           create: {
-            cityId: dto.cityId,
+            cityId: cityId,
             currentLocationId: prepSchool.id,
             currentClassId: prepSchool.classes[0].id,
             subjects: {
