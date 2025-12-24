@@ -1,3 +1,9 @@
+export class ClassRequirementsDto {
+  min_subject_level?: number;
+  subject_levels?: { subject_id: string; subject_name: string; min_level: number }[];
+  min_grade_quality?: { subject_id: string; subject_name: string; min_grade: number; count: number }[];
+}
+
 export class LocationProgressDto {
   locationId: string;
   locationName: string;
@@ -9,6 +15,8 @@ export class LocationProgressDto {
     gradeNumber: number;
     gradesCollected: Record<string, number>;
     gradesRequired: number;
+    allowedSubjects: string[];
+    requirements?: ClassRequirementsDto;
   };
 }
 

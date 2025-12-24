@@ -42,6 +42,8 @@ export class LocationsService {
         gradeNumber: number;
         gradesCollected: Record<string, number>;
         gradesRequired: number;
+        allowedSubjects: string[];
+        requirements?: Record<string, any>;
       } | null = null;
       if (character.currentClass && character.currentClass.locationId === location.id) {
         const gradesCollected: Record<string, number> = {};
@@ -55,6 +57,8 @@ export class LocationsService {
           gradeNumber: character.currentClass.gradeNumber,
           gradesCollected,
           gradesRequired: character.currentClass.requiredGradesPerSubject,
+          allowedSubjects: character.currentClass.allowedSubjects,
+          requirements: character.currentClass.requirements as Record<string, any> | undefined,
         };
       }
 
@@ -103,13 +107,69 @@ export class LocationsService {
       );
     }
 
+    // Get allowed subjects for this class
+    const allowedSubjects = character.currentClass.allowedSubjects;
+    const relevantSubjects = allowedSubjects.length > 0
+      ? subjects.filter(s => allowedSubjects.includes(s.id))
+      : subjects;
+
     const requiredGrades = character.currentClass.requiredGradesPerSubject;
-    for (const subject of subjects) {
+    for (const subject of relevantSubjects) {
       const count = gradesBySubject.get(subject.id) || 0;
       if (count < requiredGrades) {
         throw new BadRequestException(
           `Need ${requiredGrades - count} more grades in ${subject.name}`,
         );
+      }
+    }
+
+    // Check class requirements (subject levels, grade quality)
+    const requirements = character.currentClass.requirements as {
+      min_subject_level?: number;
+      subject_levels?: { subject_id: string; subject_name: string; min_level: number }[];
+      min_grade_quality?: { subject_id: string; subject_name: string; min_grade: number; count: number }[];
+    } | null;
+
+    if (requirements) {
+      // Check min_subject_level for all relevant subjects
+      if (requirements.min_subject_level) {
+        for (const subject of relevantSubjects) {
+          const charSubject = character.subjects.find(s => s.subjectId === subject.id);
+          const currentLevel = charSubject?.level || 1;
+          if (currentLevel < requirements.min_subject_level) {
+            throw new BadRequestException(
+              `${subject.name} must be level ${requirements.min_subject_level} (currently ${currentLevel})`,
+            );
+          }
+        }
+      }
+
+      // Check specific subject levels
+      if (requirements.subject_levels) {
+        for (const req of requirements.subject_levels) {
+          const charSubject = character.subjects.find(s => s.subjectId === req.subject_id);
+          const currentLevel = charSubject?.level || 1;
+          if (currentLevel < req.min_level) {
+            throw new BadRequestException(
+              `${req.subject_name} must be level ${req.min_level} (currently ${currentLevel})`,
+            );
+          }
+        }
+      }
+
+      // Check grade quality requirements
+      if (requirements.min_grade_quality) {
+        for (const req of requirements.min_grade_quality) {
+          const qualityGrades = gradesForClass.filter(
+            g => g.subjectId === req.subject_id && g.score >= req.min_grade
+          );
+          if (qualityGrades.length < req.count) {
+            const gradeLetter = req.min_grade >= 90 ? 'A' : req.min_grade >= 80 ? 'B' : req.min_grade >= 70 ? 'C+' : 'C';
+            throw new BadRequestException(
+              `Need ${req.count - qualityGrades.length} more ${gradeLetter} or higher grades in ${req.subject_name}`,
+            );
+          }
+        }
       }
     }
 

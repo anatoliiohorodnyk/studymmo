@@ -161,21 +161,93 @@ async function main() {
     return [];  // Empty means all subjects allowed
   };
 
+  // Define requirements per grade
+  // Requirements structure:
+  // - min_subject_level: required level for all subjects
+  // - subject_levels: specific level requirements per subject
+  // - min_grade_quality: { subject_id, min_grade, count } - e.g., need 2 grades of C+ or higher
+  type ClassRequirements = {
+    min_subject_level?: number;
+    subject_levels?: { subject_id: string; subject_name: string; min_level: number }[];
+    min_grade_quality?: { subject_id: string; subject_name: string; min_grade: number; count: number }[];
+  };
+
+  const getClassRequirements = (gradeNumber: number): ClassRequirements | null => {
+    // Grade 1: level 5 all subjects
+    if (gradeNumber === 1) {
+      return { min_subject_level: 5 };
+    }
+    // Grade 2: level 7 all subjects
+    if (gradeNumber === 2) {
+      return { min_subject_level: 7 };
+    }
+    // Grade 3: level 9 all subjects
+    if (gradeNumber === 3) {
+      return { min_subject_level: 9 };
+    }
+    // Grade 4: level 11 all subjects
+    if (gradeNumber === 4) {
+      return { min_subject_level: 11 };
+    }
+    // Grade 5+: level increases + quality requirements for some subjects
+    if (gradeNumber === 5) {
+      return {
+        min_subject_level: 13,
+        min_grade_quality: [
+          { subject_id: mathSubject!.id, subject_name: 'Mathematics', min_grade: 70, count: 2 }, // 2 grades C+ or higher
+        ],
+      };
+    }
+    if (gradeNumber === 6) {
+      return {
+        min_subject_level: 15,
+        min_grade_quality: [
+          { subject_id: mathSubject!.id, subject_name: 'Mathematics', min_grade: 70, count: 2 },
+          { subject_id: physicsSubject!.id, subject_name: 'Physics', min_grade: 70, count: 2 },
+        ],
+      };
+    }
+    if (gradeNumber === 7) {
+      return {
+        min_subject_level: 17,
+        min_grade_quality: [
+          { subject_id: mathSubject!.id, subject_name: 'Mathematics', min_grade: 75, count: 3 }, // 3 grades B- or higher
+          { subject_id: physicsSubject!.id, subject_name: 'Physics', min_grade: 70, count: 2 },
+        ],
+      };
+    }
+    // Grade 8+: higher requirements
+    const baseLevel = 17 + (gradeNumber - 7) * 2;
+    return {
+      min_subject_level: baseLevel,
+      min_grade_quality: [
+        { subject_id: mathSubject!.id, subject_name: 'Mathematics', min_grade: 75, count: 3 },
+        { subject_id: litSubject!.id, subject_name: 'Literature', min_grade: 70, count: 2 },
+      ],
+    };
+  };
+
   for (let i = 1; i <= 11; i++) {
     const allowedSubjects = getClassSubjects(i);
+    const requirements = getClassRequirements(i);
     await prisma.class.upsert({
       where: { id: `school-class-${i}` },
-      update: { allowedSubjects },
+      update: {
+        allowedSubjects,
+        requiredGradesPerSubject: 5,
+        requirements: requirements ?? undefined,
+      },
       create: {
         id: `school-class-${i}`,
         locationId: school.id,
         gradeNumber: i,
-        requiredGradesPerSubject: 15,
+        requiredGradesPerSubject: 5,
         allowedSubjects,
+        requirements: requirements ?? undefined,
       },
     });
   }
-  console.log('Created School with 11 classes (grade-appropriate subjects)');
+  console.log('Created School with 11 classes (grade-appropriate subjects + requirements)');
 
   // Create College
   const college = await prisma.location.upsert({

@@ -168,6 +168,7 @@ model Class {
   gradeNumber               Int      @map("grade_number")
   requiredGradesPerSubject  Int      @default(15) @map("required_grades_per_subject")
   allowedSubjects           String[] @default([]) @map("allowed_subjects")
+  requirements              Json?    @map("requirements") // Flexible requirements for class completion
   createdAt                 DateTime @default(now()) @map("created_at")
 
   location   Location         @relation(fields: [locationId], references: [id])
