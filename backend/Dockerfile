@@ -18,6 +18,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Install all dependencies (need ts-node for seed script)
 COPY package*.json ./
 COPY prisma ./prisma/
