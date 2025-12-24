@@ -21,20 +21,18 @@ WORKDIR /app
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
-# Install all dependencies (need ts-node for seed script)
+# Install all dependencies (need tsx for seed script)
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
 RUN npx prisma generate
 
-COPY --from=builder /app/dist ./dist
-
 # Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
 
-# Change ownership so nestjs can run prisma
-RUN chown -R nestjs:nodejs /app
+# Copy dist with correct ownership
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
 USER nestjs
 
