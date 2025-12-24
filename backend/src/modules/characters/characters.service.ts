@@ -84,7 +84,17 @@ export class CharactersService {
       id: string;
       gradeNumber: number;
       requirements: {
-        subjects: { subjectId: string; subjectName: string; gradesCollected: number; gradesRequired: number; met: boolean }[];
+        subjects: {
+          subjectId: string;
+          subjectName: string;
+          gradesCollected: number;
+          gradesRequired: number;
+          gradesMet: boolean;
+          currentLevel: number;
+          minLevel: number;
+          levelMet: boolean;
+        }[];
+        minSubjectLevel?: number;
       };
       canAdvance: boolean;
     } | null = null;
@@ -106,30 +116,52 @@ export class CharactersService {
             ? locationAllowedSubjects
             : character.subjects.map((cs: any) => cs.subjectId);
 
+        // Get class requirements from currentClass (the one we need to complete)
+        const classRequirements = character.currentClass!.requirements as {
+          min_subject_level?: number;
+          subject_levels?: { subject_id: string; subject_name: string; min_level: number }[];
+          min_grade_quality?: { subject_id: string; subject_name: string; min_grade: number; count: number }[];
+        } | null;
+
+        const minSubjectLevel = classRequirements?.min_subject_level || 0;
+
         const subjectRequirements = relevantSubjectIds.map((subjectId: string) => {
-          const subject = character.subjects.find((cs: any) => cs.subjectId === subjectId);
+          const charSubject = character.subjects.find((cs: any) => cs.subjectId === subjectId);
           const gradesForSubject = character.grades.filter(
             (g: any) => g.classId === character.currentClass!.id && g.subjectId === subjectId
           );
           const gradesCollected = gradesForSubject.length;
           const gradesRequired = character.currentClass!.requiredGradesPerSubject;
+          const currentLevel = charSubject?.level || 1;
+
+          // Check for subject-specific level requirement
+          const subjectSpecificLevel = classRequirements?.subject_levels?.find(
+            (sl) => sl.subject_id === subjectId
+          )?.min_level;
+          const requiredLevel = subjectSpecificLevel || minSubjectLevel || 0;
 
           return {
             subjectId,
-            subjectName: subject?.subject?.name || 'Unknown',
+            subjectName: charSubject?.subject?.name || 'Unknown',
             gradesCollected,
             gradesRequired,
-            met: gradesCollected >= gradesRequired,
+            gradesMet: gradesCollected >= gradesRequired,
+            currentLevel,
+            minLevel: requiredLevel,
+            levelMet: requiredLevel === 0 || currentLevel >= requiredLevel,
           };
         });
 
-        const canAdvance = subjectRequirements.every((s: any) => s.met);
+        const allGradesMet = subjectRequirements.every((s) => s.gradesMet);
+        const allLevelsMet = subjectRequirements.every((s) => s.levelMet);
+        const canAdvance = allGradesMet && allLevelsMet;
 
         nextClassInfo = {
           id: nextClass.id,
           gradeNumber: nextClass.gradeNumber,
           requirements: {
             subjects: subjectRequirements,
+            minSubjectLevel: minSubjectLevel > 0 ? minSubjectLevel : undefined,
           },
           canAdvance,
         };

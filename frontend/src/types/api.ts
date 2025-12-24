@@ -58,7 +58,10 @@ export interface NextClassRequirementSubject {
   subjectName: string;
   gradesCollected: number;
   gradesRequired: number;
-  met: boolean;
+  gradesMet: boolean;
+  currentLevel: number;
+  minLevel: number;
+  levelMet: boolean;
 }
 
 export interface NextClass {
@@ -66,6 +69,7 @@ export interface NextClass {
   gradeNumber: number;
   requirements: {
     subjects: NextClassRequirementSubject[];
+    minSubjectLevel?: number;
   };
   canAdvance: boolean;
 }

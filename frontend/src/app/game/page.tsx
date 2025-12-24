@@ -124,7 +124,7 @@ export default function GamePage() {
           <div className="max-w-xs mx-auto">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[var(--text-secondary)]">Next Grade</span>
-              <span className="text-sm font-bold text-[var(--accent)]">{clicksUntilNextGrade} clicks</span>
+              <span className="text-sm font-bold text-[var(--accent)]">{clicksUntilNextGrade} lessons</span>
             </div>
             <ProgressBar
               value={gradeProgress}
@@ -148,41 +148,60 @@ export default function GamePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <p className="text-xs text-[var(--text-muted)]">
-                Collect required grades in each subject to advance
-              </p>
-
-              {/* Subject Grade Requirements */}
+            <div className="space-y-4">
+              {/* Subject Requirements */}
               {[...nextClass.requirements.subjects].sort((a, b) => a.subjectName.localeCompare(b.subjectName)).map((req) => {
-                const progress = Math.min(100, (req.gradesCollected / req.gradesRequired) * 100);
+                const hasLevelReq = req.minLevel > 0;
+                const conditionsMet = (req.gradesMet ? 1 : 0) + (req.levelMet ? 1 : 0);
+                const totalConditions = hasLevelReq ? 2 : 1;
 
                 return (
-                  <div key={req.subjectId} className="space-y-1.5">
+                  <div key={req.subjectId} className="space-y-2">
+                    {/* Subject Name with conditions count */}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-[var(--text-primary)]">{req.subjectName}</span>
-                      <span className={`text-xs font-medium ${req.met ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}>
-                        {req.gradesCollected}/{req.gradesRequired}
-                        {req.met && (
+                      <span className="text-sm font-medium text-[var(--text-primary)]">
+                        {req.subjectName}
+                      </span>
+                      <span className={`text-xs font-medium ${conditionsMet === totalConditions ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}>
+                        {conditionsMet}/{totalConditions}
+                        {conditionsMet === totalConditions && (
                           <svg className="w-3.5 h-3.5 inline ml-1" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </span>
                     </div>
-                    <ProgressBar
-                      value={req.gradesCollected}
-                      max={req.gradesRequired}
-                      color={req.met ? 'green' : 'blue'}
-                      size="sm"
-                    />
+
+                    {/* Level requirement */}
+                    {hasLevelReq && (
+                      <div className="ml-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${req.levelMet ? 'bg-[var(--success)]' : 'bg-[var(--text-muted)]'}`} />
+                          <span className="text-xs text-[var(--text-secondary)]">Level</span>
+                        </div>
+                        <span className={`text-xs ${req.levelMet ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}>
+                          {req.currentLevel}/{req.minLevel}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Grades requirement */}
+                    <div className="ml-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${req.gradesMet ? 'bg-[var(--success)]' : 'bg-[var(--text-muted)]'}`} />
+                        <span className="text-xs text-[var(--text-secondary)]">Grades</span>
+                      </div>
+                      <span className={`text-xs ${req.gradesMet ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}>
+                        {req.gradesCollected}/{req.gradesRequired}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
 
               {/* Advance to Next Class Button */}
               {nextClass.canAdvance && (
-                <div className="pt-3 mt-2 border-t border-[var(--border)]">
+                <div className="pt-3 mt-3 border-t border-[var(--border)]">
                   <button
                     onClick={async () => {
                       setIsAdvancing(true);

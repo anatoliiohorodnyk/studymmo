@@ -49,7 +49,10 @@ export class NextClassRequirementSubjectDto {
   subjectName: string;
   gradesCollected: number;
   gradesRequired: number;
-  met: boolean;
+  gradesMet: boolean;
+  currentLevel: number;
+  minLevel: number;
+  levelMet: boolean;
 }
 
 export class NextClassDto {
@@ -57,6 +60,7 @@ export class NextClassDto {
   gradeNumber: number;
   requirements: {
     subjects: NextClassRequirementSubjectDto[];
+    minSubjectLevel?: number;
   };
   canAdvance: boolean;
 }

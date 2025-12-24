@@ -78,12 +78,19 @@ Prep School (100%) → School (60%) → College (85%) → University
 
 **School**
 - 11 classes (grades 1-11)
-- Each class requires 15 grades per subject to complete
+- Each class requires 5 grades per subject to complete (reduced from 15)
 - Progress: each class = 9.09% of location
 - **Subject restrictions by grade:**
   - Grade 1-2: Mathematics, Literature, Physical Education, Art (4 subjects)
   - Grade 3-4: + History, Foreign Language (6 subjects)
   - Grade 5-11: All 9 subjects (including Physics, Chemistry, Biology)
+- **Level requirements per grade:**
+  - Grade 1: All subjects must be Level 5
+  - Grade 2: All subjects must be Level 7
+  - Grade 3: All subjects must be Level 9
+  - Grade 4: All subjects must be Level 11
+  - Grade 5: All subjects must be Level 13
+  - Higher grades: continue pattern (+2 levels per grade)
 
 **College**
 - Multiple specializations available
@@ -148,10 +155,10 @@ function generateGrade(subjectLevel, equipmentBonus) {
 ```
 
 **Class Completion Requirements:**
-- 15 grades from each subject (9 subjects × 15 = 135 grades)
-- Grade generated every 10 study clicks
-- ~1,350 clicks per class
-- ~12 hours total for all 11 school classes
+- 5 grades from each subject (reduced from 15)
+- Subject level requirements (e.g., Level 5 for Grade 1, Level 7 for Grade 2)
+- Grade generated every 10 study lessons
+- UI shows both grades collected and level progress per subject
 
 ### 6. Equipment System
 
@@ -1120,3 +1127,9 @@ export const GAME_CONFIG = {
 - **v0.9 Daily Login Rewards completed**: 7-day reward cycle with cash, items, and quest energy
 - Renamed project from EduQuest to StudyMMO
 - Fixed market controller bug (incorrect JWT payload field usage)
+
+### v1.6 (December 2024)
+- **Class requirements overhaul**: Reduced grades per subject from 15 to 5, added level requirements per grade
+- **Flexible class requirements**: Each class can have custom requirements (min_subject_level, subject-specific levels, grade quality)
+- **Improved class progression UI**: Now displays both Level and Grades requirements with bullet-point indicators (matching location transition style)
+- **Terminology change**: "clicks" renamed to "lessons" in UI for better thematic consistency
